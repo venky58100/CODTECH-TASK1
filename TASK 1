@@ -1,0 +1,62 @@
+import paho.mqtt.client as mqtt
+import time
+
+# MQTT broker configuration
+broker_address = "your_broker_address"  # Replace with your MQTT broker's address
+broker_port = 1883                      # Default MQTT port
+
+# Topics for different devices or sensors
+light_topic = "smart_home/living_room/light"
+temperature_topic = "smart_home/bedroom/temperature"
+
+# Dummy function to simulate device states
+def get_light_status():
+    # Replace with actual logic to read light status
+    return "ON"
+
+def set_light_status(status):
+    # Replace with actual logic to control light
+    print(f"Turning light {'ON' if status else 'OFF'}")
+
+def get_temperature():
+    # Replace with actual logic to read temperature
+    return 25.0
+
+# MQTT callbacks
+def on_connect(client, userdata, flags, rc):
+    print("Connected with result code " + str(rc))
+    client.subscribe(light_topic)
+    client.subscribe(temperature_topic)
+
+def on_message(client, userdata, msg):
+    print(msg.topic + " " + str(msg.payload))
+    if msg.topic == light_topic:
+        if msg.payload.decode() == "ON":
+            set_light_status(True)
+        elif msg.payload.decode() == "OFF":
+            set_light_status(False)
+    elif msg.topic == temperature_topic:
+        temperature = get_temperature()
+        client.publish("smart_home/bedroom/temperature/status", str(temperature))
+
+# MQTT client initialization
+client = mqtt.Client()
+client.on_connect = on_connect
+client.on_message = on_message
+
+# Connect to MQTT broker
+client.connect(broker_address, broker_port, 60)
+
+# Main loop to listen for messages
+client.loop_start()
+
+try:
+    while True:
+        # Periodically check and publish temperature status
+        temperature = get_temperature()
+        client.publish("smart_home/bedroom/temperature/status", str(temperature))
+        time.sleep(5)  # Adjust interval as needed
+except KeyboardInterrupt:
+    print("Interrupted")
+    client.disconnect()
+    client.loop_stop()
